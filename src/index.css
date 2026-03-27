@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #FDFCF9;
+  --color-ink: #2A2A2A;
+  --color-secondary: #6B6B6B;
+  --color-accent: #D6D3CD;
+  --color-card: rgba(255,255,255,0.5);
+  --font-sans: 'Inter', ui-sans-serif, system-ui;
+  --font-serif: 'Playfair Display', ui-serif, Georgia;
+}
+
+:root {
+  background-color: var(--color-paper);
+  transition: background-color 0.4s ease;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  transition: background-color 0.4s ease, color 0.4s ease, font-family 0.3s ease;
+}
+
+/* Theme picker interactions */
+.theme-toggle {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+.theme-toggle:hover {
+  transform: scale(1.1);
+}
+
+.theme-dropdown {
+  animation: gentle-fade 0.2s ease forwards;
+}
+
+.theme-option {
+  transition: background-color 0.15s ease;
+  border: none;
+  cursor: pointer;
+}
+.theme-option:hover {
+  opacity: 0.8;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+}
+
+/* Task card interactions */
+.task-item {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  border-radius: 8px;
+  padding: 10px 8px;
+}
+
+.task-item:hover {
+  background-color: var(--color-accent, #D6D3CD);
+  background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.task-item:active {
+  transform: scale(0.97);
+}
+
+/* Zen checkbox — smooth fill, gentle pop */
+.checkbox-ring {
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.checkbox-ring.checked {
+  transform: scale(1.1);
+}
+
+@keyframes zen-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  50%  { transform: scale(1.2); opacity: 0.8; }
+  80%  { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.checkbox-dot {
+  animation: zen-pop 0.3s ease forwards;
+}
+
+/* Custom satisfied effect */
+.task-completed {
+  opacity: 0.5;
+  text-decoration-line: line-through;
+  text-decoration-color: var(--color-accent);
+  transition: opacity 0.4s ease, text-decoration 0.4s ease;
+}
+
+/* Writing experience — expanding underline while typing */
+.task-input {
+  position: relative;
+  caret-color: var(--color-secondary);
+}
+
+.task-input-wrapper {
+  position: relative;
+}
+
+.task-input-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+.task-input-wrapper:focus-within::after {
+  width: 100%;
+}
+
+/* Footer — background info, not main content */
+.reset-text {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.reset-text:hover {
+  opacity: 0.6;
+}
+
+/* Smooth slide into completed area */
+@keyframes slide-down {
+  0%   { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slide-down 0.35s ease forwards;
+}
+
+.completed-area {
+  transition: all 0.3s ease;
+}
+
+/* Quiet encouragement — fades in gently */
+@keyframes gentle-fade {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.encouragement-msg {
+  animation: gentle-fade 0.8s ease forwards;
+}
+
+/* Pure CSS paper grain — 4% opacity, no external images */
+.paper-grain {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
