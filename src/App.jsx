@@ -30,8 +30,16 @@ export default function App() {
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [isPremium, setIsPremium] = useState(() => localStorage.getItem('premium') === 'true')
   const lastFreeTheme = useRef('classic')
   const lastFreeFont = useRef('playfair')
+
+  // When premium changes, persist it
+  useEffect(() => {
+    if (isPremium) {
+      localStorage.setItem('premium', 'true')
+    }
+  }, [isPremium])
 
   // Keep track of the last free selections to revert back if canceled
   useEffect(() => {
@@ -48,19 +56,22 @@ export default function App() {
 
   function handleCancelUpgrade() {
     setShowUpgradeModal(false)
-    setActiveTheme(lastFreeTheme.current)
-    setActiveFont(lastFreeFont.current)
+    if (!isPremium) {
+      setActiveTheme(lastFreeTheme.current)
+      setActiveFont(lastFreeFont.current)
+    }
   }
 
-  // Split into active & completed
   const activeMain = mainTasks.filter(t => !t.completed)
   const completedMain = mainTasks.filter(t => t.completed)
   const activeSmall = smallTasks.filter(t => !t.completed)
   const completedSmall = smallTasks.filter(t => t.completed)
   const totalCompleted = completedMain.length + completedSmall.length
+  const totalTasks = mainTasks.length + smallTasks.length
+  const allDone = totalTasks > 0 && totalCompleted === totalTasks
 
   return (
-    <div className="min-h-screen flex flex-col items-center py-8 sm:py-20 px-4 sm:px-6 w-full max-w-[600px] mx-auto select-none">
+    <div className={`min-h-screen flex flex-col items-center py-8 sm:py-20 px-4 sm:px-6 w-full max-w-[600px] mx-auto select-none animate-fade-in ${allDone ? 'all-done-bg' : ''}`}>
       <div className="paper-grain" />
 
       {/* HEADER */}
@@ -90,7 +101,7 @@ export default function App() {
               <input
                 autoFocus
                 className="w-full bg-transparent border-none outline-none text-lg sm:text-xl placeholder-paper placeholder:opacity-70 font-serif italic text-paper caret-paper"
-                placeholder="What is your focus today?"
+                placeholder={mainTasks.length === 0 ? "What matters today?" : "What is your focus today?"}
                 value={mainInput}
                 onChange={(e) => setMainInput(e.target.value)}
               />
@@ -131,15 +142,27 @@ export default function App() {
       </section>
 
       {/* QUIET ENCOURAGEMENT — only at 3+ completed */}
-      {totalCompleted >= 3 && (
+      {allDone ? (
+        <p className="encouragement-msg mt-12 text-lg italic text-ink font-serif text-center">
+          You've completed everything. Rest now.
+        </p>
+      ) : totalCompleted >= 3 && (
         <p className="encouragement-msg mt-12 text-sm italic text-secondary/70 font-serif text-center">
           Good work today.
         </p>
       )}
 
       {/* FOOTER */}
-      <footer className="mt-auto pt-12 text-center">
-        <p className="reset-text uppercase">Resetting in 24 hours</p>
+      <footer className="mt-auto pt-16 pb-6 w-full flex flex-col items-center text-center gap-4">
+        <p className="reset-text uppercase mb-2">Resetting in 24 hours</p>
+        
+        <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest font-bold opacity-30 hover:opacity-80 transition-opacity" style={{ color: 'var(--color-ink)' }}>
+          <a href="https://docs.google.com/document/d/1SzBYUvcYLhPuwF27ioVhtZDq2Qp30GyY-_3og2-M4Rg/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:underline">Privacy</a>
+          <span>•</span>
+          <a href="https://docs.google.com/document/d/17O6uWFG3KEiMnbHpYTNWOjNLDVSMyxbyS9hYKUZCNqk/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:underline">Terms</a>
+        </div>
+        
+        <p className="text-[10px] italic font-serif opacity-40" style={{ color: 'var(--color-ink)' }}>Your data stays on your device.</p>
       </footer>
 
       {/* BOTTOM ACTION BUTTONS */}
@@ -149,7 +172,9 @@ export default function App() {
           activeTheme={activeTheme} 
           setActiveTheme={setActiveTheme} 
           themes={themeList} 
-          onPremiumSelect={() => setShowUpgradeModal(true)} 
+          onPremiumSelect={() => {
+            if (!isPremium) setShowUpgradeModal(true)
+          }} 
         />
 
         {/* SETTINGS BUTTON */}
@@ -177,14 +202,20 @@ export default function App() {
         fonts={fontList}
         activeFont={activeFont}
         setActiveFont={setActiveFont}
-        onPremiumSelect={() => setShowUpgradeModal(true)}
+        onPremiumSelect={() => {
+          if (!isPremium) setShowUpgradeModal(true)
+        }}
       />
 
       {/* UPGRADE MODAL */}
       <UpgradeModal 
         isOpen={showUpgradeModal} 
         onClose={handleCancelUpgrade} 
-        onUnlock={() => setShowUpgradeModal(false)}
+        onUnlock={() => {
+          setIsPremium(true)
+          localStorage.setItem('premium', 'true')
+          setShowUpgradeModal(false)
+        }}
         themes={themeList}
         activeTheme={activeTheme}
         setActiveTheme={setActiveTheme}

@@ -36,6 +36,20 @@ body {
   animation: gentle-fade 0.2s ease forwards;
 }
 
+@keyframes main-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: main-fade-in 0.8s ease-out forwards;
+}
+
+/* Softer background when all done */
+.all-done-bg {
+  background-color: color-mix(in srgb, var(--color-paper) 95%, var(--color-ink)) !important;
+}
+
 .theme-option {
   transition: background-color 0.15s ease;
   border: none;

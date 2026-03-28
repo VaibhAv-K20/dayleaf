@@ -193,6 +193,17 @@ export default function SettingsModal({ isOpen, onClose, themes, activeTheme, se
                 <span>←</span> Back
               </button>
               <MarkdownBlock text={privacyText} />
+              <div className="mt-4 pt-4 border-t text-sm text-center" style={{ borderColor: 'var(--color-accent)' }}>
+                <a 
+                  href="https://docs.google.com/document/d/1SzBYUvcYLhPuwF27ioVhtZDq2Qp30GyY-_3og2-M4Rg/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:opacity-70 transition-opacity font-medium"
+                  style={{ color: 'var(--color-ink)' }}
+                >
+                  View full Privacy Policy
+                </a>
+              </div>
             </div>
           )}
 
@@ -205,6 +216,17 @@ export default function SettingsModal({ isOpen, onClose, themes, activeTheme, se
                 <span>←</span> Back
               </button>
               <MarkdownBlock text={termsText} />
+              <div className="mt-4 pt-4 border-t text-sm text-center" style={{ borderColor: 'var(--color-accent)' }}>
+                <a 
+                  href="https://docs.google.com/document/d/17O6uWFG3KEiMnbHpYTNWOjNLDVSMyxbyS9hYKUZCNqk/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:opacity-70 transition-opacity font-medium"
+                  style={{ color: 'var(--color-ink)' }}
+                >
+                  View full Terms of Service
+                </a>
+              </div>
             </div>
           )}
         </div>

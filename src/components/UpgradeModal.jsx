@@ -97,7 +97,6 @@ export default function UpgradeModal({ isOpen, onClose, onUnlock, themes, active
           </div>
         </div>
 
-        {/* CTA */}
         <button 
           onClick={onUnlock}
           className="w-full py-4 rounded-full text-lg font-medium transition-transform hover:scale-[1.02] active:scale-[0.98]"
@@ -106,10 +105,26 @@ export default function UpgradeModal({ isOpen, onClose, onUnlock, themes, active
           Unlock your space
         </button>
 
-        <p className="text-center mt-5">
+        <p className="text-center mt-5 flex flex-col items-center gap-3">
           <button onClick={onClose} className="text-xs opacity-50 hover:opacity-100 uppercase tracking-wider font-semibold">
             Continue with free basic
           </button>
+          <button 
+            onClick={() => {
+              if (localStorage.getItem('premium') === 'true') {
+                onUnlock()
+              } else {
+                alert('No premium purchase found on this device.')
+              }
+            }} 
+            className="text-[10px] opacity-40 hover:opacity-80 transition-opacity underline underline-offset-2 uppercase tracking-widest font-semibold"
+          >
+            Restore purchase
+          </button>
+        </p>
+
+        <p className="text-center mt-6">
+          <span className="text-[10px] uppercase tracking-widest opacity-30 font-bold" style={{ color: 'var(--color-ink)' }}>Premium unlock applies to this device only</span>
         </p>
       </div>
     </div>
