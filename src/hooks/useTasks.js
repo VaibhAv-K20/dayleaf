@@ -52,7 +52,8 @@ export default function useTasks() {
 
   const addMainTask = (e) => {
     e.preventDefault()
-    if (mainTasks.length < 3 && mainInput.trim()) {
+    const activeMainCount = mainTasks.filter(t => !t.completed).length
+    if (activeMainCount < 3 && mainInput.trim()) {
       setMainTasks([...mainTasks, { id: Date.now(), text: mainInput.trim(), completed: false }])
       setMainInput('')
     }
@@ -60,7 +61,8 @@ export default function useTasks() {
 
   const addSmallTask = (e) => {
     e.preventDefault()
-    if (smallTasks.length < 5 && smallInput.trim()) {
+    const activeSmallCount = smallTasks.filter(t => !t.completed).length
+    if (activeSmallCount < 5 && smallInput.trim()) {
       setSmallTasks([...smallTasks, { id: Date.now(), text: smallInput.trim(), completed: false }])
       setSmallInput('')
     }

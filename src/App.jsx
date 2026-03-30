@@ -1,21 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import useTasks from './hooks/useTasks'
 import useTheme from './hooks/useTheme'
 import useFont from './hooks/useFont'
 import TaskRow from './components/TaskRow'
-import CompletedArea from './components/CompletedArea'
-import SettingsModal from './components/SettingsModal'
-import ThemePicker from './components/ThemePicker'
+
+import Sidebar from './components/Sidebar'
 import UpgradeModal from './components/UpgradeModal'
 
 /**
- * App — The main PaperFlow layout.
- * 
- * A minimalist daily planner with:
- *   - 3 Main Tasks (big priorities)
- *   - 5 Small Tasks (quick wins)
- *   - 24-hour auto-reset
+ * App — The main Dayleaf layout.
  */
+const MAX_MAIN = 100
+const MAX_SMALL = 60
+
 export default function App() {
   const {
     mainTasks, smallTasks,
@@ -29,10 +26,14 @@ export default function App() {
   const { activeFont, setActiveFont, fonts: fontList } = useFont()
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
   const [isPremium, setIsPremium] = useState(() => localStorage.getItem('premium') === 'true')
+  const [pendingCompleting, setPendingCompleting] = useState(new Set())
+  const [undoToast, setUndoToast] = useState(null)
+  
   const lastFreeTheme = useRef('classic')
   const lastFreeFont = useRef('playfair')
+  const undoTimeoutRef = useRef(null)
 
   // When premium changes, persist it
   useEffect(() => {
@@ -62,6 +63,49 @@ export default function App() {
     }
   }
 
+  // Handle task toggle with "Thanos" effect and Undo
+  const handleTaskToggle = useCallback((id, isMain) => {
+    const taskList = isMain ? mainTasks : smallTasks
+    const task = taskList.find(t => t.id === id)
+    
+    if (!task) return
+
+    // If uncompleting (unlikely to happen from main view now, but just in case)
+    if (task.completed) {
+      toggleTask(id, isMain)
+      return
+    }
+
+    // Start dissolving animation (Thanos effect)
+    setPendingCompleting(prev => new Set(prev).add(id))
+    
+    setTimeout(() => {
+      // Actually complete it
+      toggleTask(id, isMain)
+      setPendingCompleting(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+
+      // Show Undo Toast
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current)
+      setUndoToast({ id, isMain, text: task.text })
+      
+      undoTimeoutRef.current = setTimeout(() => {
+        setUndoToast(null)
+      }, 5000)
+    }, 700) // Match CSS animation duration
+  }, [mainTasks, smallTasks, toggleTask])
+
+  const handleUndo = () => {
+    if (undoToast) {
+      toggleTask(undoToast.id, undoToast.isMain)
+      setUndoToast(null)
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current)
+    }
+  }
+
   const activeMain = mainTasks.filter(t => !t.completed)
   const completedMain = mainTasks.filter(t => t.completed)
   const activeSmall = smallTasks.filter(t => !t.completed)
@@ -71,74 +115,131 @@ export default function App() {
   const allDone = totalTasks > 0 && totalCompleted === totalTasks
 
   return (
-    <div className={`min-h-screen flex flex-col items-center py-8 sm:py-20 px-4 sm:px-6 w-full max-w-[600px] mx-auto select-none animate-fade-in ${allDone ? 'all-done-bg' : ''}`}>
-      <div className="paper-grain" />
+    <div className="min-h-screen w-full relative">
+      <div className={`flex flex-col items-center pt-16 pb-8 sm:py-20 px-4 sm:px-6 w-full max-w-[600px] mx-auto select-none animate-fade-in ${allDone ? 'all-done-bg' : ''}`}>
+        <div className="paper-grain" />
 
       {/* HEADER */}
-      <header className="w-full mb-10 sm:mb-16 text-center">
-        <h1 className="text-3xl sm:text-4xl italic text-ink mb-2">Dayleaf</h1>
-        <p className="text-xs sm:text-sm tracking-widest uppercase text-secondary font-medium">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+      <header className="relative w-full mb-10 sm:mb-16 text-center flex items-center justify-center">
+        {/* HAMBURGER MENU */}
+        <button 
+          onClick={() => setShowSidebar(true)}
+          className="absolute left-0 w-12 h-12 flex flex-col justify-center gap-[5px] opacity-60 hover:opacity-100 transition-opacity"
+          title="Open Settings"
+        >
+          <div className="w-6 h-[2px] rounded-full" style={{ backgroundColor: 'var(--color-ink)' }}></div>
+          <div className="w-6 h-[2px] rounded-full" style={{ backgroundColor: 'var(--color-ink)' }}></div>
+          <div className="w-4 h-[2px] rounded-full" style={{ backgroundColor: 'var(--color-ink)' }}></div>
+        </button>
+        <div>
+          <h1 className="text-3xl sm:text-4xl italic text-ink mb-2">Dayleaf</h1>
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-secondary font-medium">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
       </header>
 
       {/* MAIN TASKS (3 MAX) */}
       <section className="w-full mb-10 sm:mb-16 rounded-2xl p-5 sm:p-8" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
         <div className="flex justify-between items-baseline mb-6 border-b border-accent pb-2">
           <h2 className="text-ink uppercase tracking-widest text-xs font-bold">Main Tasks</h2>
-          <span className="text-xs text-secondary italic">{mainTasks.length} / 3</span>
+          <span className="text-xs text-secondary italic">{activeMain.length} / 3</span>
         </div>
 
         <div className="space-y-6 mb-4">
           {activeMain.map(task => (
-            <TaskRow key={task.id} task={task} isMain={true} size="large" onToggle={toggleTask} />
+            <TaskRow 
+              key={task.id} 
+              task={task} 
+              isMain={true} 
+              size="large" 
+              onToggle={handleTaskToggle} 
+              dissolving={pendingCompleting.has(task.id)}
+            />
           ))}
         </div>
 
-        {mainTasks.length < 3 && (
+        {activeMain.length < 3 && (
           <form onSubmit={addMainTask} className="w-full mt-2">
             <div className="w-full bg-ink rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center shadow-inner transition-colors duration-400">
-              <input
+              <textarea
                 autoFocus
-                className="w-full bg-transparent border-none outline-none text-lg sm:text-xl placeholder-paper placeholder:opacity-70 font-serif italic text-paper caret-paper"
-                placeholder={mainTasks.length === 0 ? "What matters today?" : "What is your focus today?"}
+                rows="1"
+                maxLength={MAX_MAIN}
+                className="task-textarea w-full bg-transparent border-none outline-none text-lg sm:text-xl placeholder-paper placeholder:opacity-70 font-serif italic text-paper caret-paper resize-none overflow-y-auto max-h-[120px]"
+                placeholder={activeMain.length === 0 ? "What matters today?" : "What is your focus today?"}
                 value={mainInput}
-                onChange={(e) => setMainInput(e.target.value)}
+                onChange={(e) => {
+                  setMainInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addMainTask(e);
+                  }
+                }}
               />
+              {mainInput.length > 0 && (
+                <div className={`char-count absolute -bottom-6 right-2 text-[10px] font-serif italic transition-opacity duration-300 ${mainInput.length > MAX_MAIN * 0.8 ? 'opacity-100' : 'opacity-0'}`} style={{ color: 'var(--color-paper)' }}>
+                  {mainInput.length >= MAX_MAIN ? "One clear task is enough —" : `${mainInput.length} / ${MAX_MAIN}`}
+                </div>
+              )}
             </div>
           </form>
         )}
-
-        <CompletedArea tasks={completedMain} isMain={true} size="large" onToggle={toggleTask} />
       </section>
 
       {/* SMALL TASKS (5 MAX) */}
       <section className="w-full rounded-2xl p-5 sm:p-8" style={{ backgroundColor: 'var(--color-card)', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
         <div className="flex justify-between items-baseline mb-6 border-b border-accent pb-2">
           <h2 className="text-ink uppercase tracking-widest text-xs font-bold">Small Tasks</h2>
-          <span className="text-xs text-secondary italic">{smallTasks.length} / 5</span>
+          <span className="text-xs text-secondary italic">{activeSmall.length} / 5</span>
         </div>
 
         <div className="space-y-4 mb-4">
           {activeSmall.map(task => (
-            <TaskRow key={task.id} task={task} isMain={false} size="small" onToggle={toggleTask} />
+            <TaskRow 
+              key={task.id} 
+              task={task} 
+              isMain={false} 
+              size="small" 
+              onToggle={handleTaskToggle} 
+              dissolving={pendingCompleting.has(task.id)}
+            />
           ))}
         </div>
 
-        {smallTasks.length < 5 && (
+        {activeSmall.length < 5 && (
           <form onSubmit={addSmallTask} className="w-full mt-2">
             <div className="w-full bg-ink rounded-xl px-4 sm:px-5 py-3 sm:py-4 flex items-center shadow-inner transition-colors duration-400">
-              <input
-                className="w-full bg-transparent border-none outline-none text-base sm:text-lg placeholder-paper placeholder:opacity-70 font-serif italic text-paper caret-paper"
+              <textarea
+                rows="1"
+                maxLength={MAX_SMALL}
+                className="task-textarea w-full bg-transparent border-none outline-none text-base sm:text-lg placeholder-paper placeholder:opacity-70 font-serif italic text-paper caret-paper resize-none overflow-y-auto max-h-[100px]"
                 placeholder="Maybe something else?"
                 value={smallInput}
-                onChange={(e) => setSmallInput(e.target.value)}
+                onChange={(e) => {
+                  setSmallInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addSmallTask(e);
+                  }
+                }}
               />
+              {smallInput.length > 0 && (
+                <div className={`char-count absolute -bottom-5 right-2 text-[9px] font-serif italic transition-opacity duration-300 ${smallInput.length > MAX_SMALL * 0.7 ? 'opacity-100' : 'opacity-0'}`} style={{ color: 'var(--color-paper)' }}>
+                   {smallInput.length >= MAX_SMALL ? "Keep it short —" : `${smallInput.length} / ${MAX_SMALL}`}
+                </div>
+              )}
             </div>
           </form>
         )}
-
-        <CompletedArea tasks={completedSmall} isMain={false} size="small" onToggle={toggleTask} />
       </section>
 
       {/* QUIET ENCOURAGEMENT — only at 3+ completed */}
@@ -152,62 +253,36 @@ export default function App() {
         </p>
       )}
 
-      {/* FOOTER */}
-      <footer className="mt-auto pt-16 pb-6 w-full flex flex-col items-center text-center gap-4">
-        <p className="reset-text uppercase mb-2">Resetting in 24 hours</p>
-        
-        <div className="flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest font-bold opacity-30 hover:opacity-80 transition-opacity" style={{ color: 'var(--color-ink)' }}>
-          <a href="https://docs.google.com/document/d/1SzBYUvcYLhPuwF27ioVhtZDq2Qp30GyY-_3og2-M4Rg/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:underline">Privacy</a>
-          <span>•</span>
-          <a href="https://docs.google.com/document/d/17O6uWFG3KEiMnbHpYTNWOjNLDVSMyxbyS9hYKUZCNqk/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:underline">Terms</a>
+      {totalCompleted > 0 && !allDone && (
+        <div className="completed-count font-serif animate-fade-in">
+          {totalCompleted} task{totalCompleted !== 1 ? 's' : ''} completed today
         </div>
-        
-        <p className="text-[10px] italic font-serif opacity-40" style={{ color: 'var(--color-ink)' }}>Your data stays on your device.</p>
-      </footer>
+      )}
 
-      {/* BOTTOM ACTION BUTTONS */}
-      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-3">
-        {/* THEME PICKER */}
-        <ThemePicker 
-          activeTheme={activeTheme} 
-          setActiveTheme={setActiveTheme} 
-          themes={themeList} 
-          onPremiumSelect={() => {
-            if (!isPremium) setShowUpgradeModal(true)
-          }} 
-        />
 
-        {/* SETTINGS BUTTON */}
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          className="w-11 h-11 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-110 active:scale-95"
-          style={{
-            backgroundColor: themeList[activeTheme].colors.accent,
-            color: themeList[activeTheme].colors.ink,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.1)'
-          }}
-          title="Settings"
-        >
-          ⚙️
-        </button>
+
       </div>
 
-      {/* SETTINGS MODAL */}
-      <SettingsModal 
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
+      {/* SIDEBAR & MODALS - Moved outside animated container for fixed positioning stability */}
+      <Sidebar 
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
         themes={themeList}
         activeTheme={activeTheme}
         setActiveTheme={setActiveTheme}
         fonts={fontList}
         activeFont={activeFont}
         setActiveFont={setActiveFont}
+        completedTasks={[
+          ...completedMain.map(t => ({ ...t, _isMain: true })),
+          ...completedSmall.map(t => ({ ...t, _isMain: false }))
+        ]}
+        onToggleTask={toggleTask}
         onPremiumSelect={() => {
           if (!isPremium) setShowUpgradeModal(true)
         }}
       />
 
-      {/* UPGRADE MODAL */}
       <UpgradeModal 
         isOpen={showUpgradeModal} 
         onClose={handleCancelUpgrade} 
@@ -220,6 +295,15 @@ export default function App() {
         activeTheme={activeTheme}
         setActiveTheme={setActiveTheme}
       />
+
+      {undoToast && (
+        <div className="undo-toast">
+          <span className="text-sm opacity-80">Task completed</span>
+          <button onClick={handleUndo} className="undo-button">
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   )
 }

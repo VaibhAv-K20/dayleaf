@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">dayleaf</string>
+    <string name="title_activity_main">dayleaf</string>
+    <string name="package_name">com.dayleaf.app</string>
+    <string name="custom_url_scheme">com.dayleaf.app</string>
+</resources>
